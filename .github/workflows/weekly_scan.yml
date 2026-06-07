@@ -28,4 +28,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python main.py --seed data/seed_groot.csv
+        run: |
+          python main.py --seed data/seed_nl.csv
+          python main.py --seed data/seed_groot.csv
+          python main.py --seed data/seed_uitbreiding.csv
