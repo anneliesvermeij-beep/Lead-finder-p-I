@@ -112,6 +112,6 @@ def save_leads(path: str, leads: list):
             for r in records:
                 r["score"] = int(r["score"] or 0)
             client.table("leads").upsert(records, on_conflict="website").execute()
-            print(f"✓ {len(records)} leads gesynchroniseerd naar Supabase.")
+            print(f"[OK] {len(records)} leads gesynchroniseerd naar Supabase.")
         except Exception as e:
-            print(f"⚠ Supabase sync mislukt: {e}")
+            print(f"[FOUT] Supabase sync mislukt: {e}")

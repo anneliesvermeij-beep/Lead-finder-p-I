@@ -1,0 +1,31 @@
+name: Wekelijkse lead scan
+
+on:
+  schedule:
+    # Elke maandag om 07:00 Nederlandse tijd (05:00 UTC)
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+    # Knop in GitHub om ook handmatig te starten
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v4
+
+      - name: Python installeren
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Packages installeren
+        run: pip install -r requirements.txt
+
+      - name: Bureaus scannen en naar Supabase sturen
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python main.py --seed data/seed_groot.csv
