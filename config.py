@@ -27,9 +27,6 @@ USER_AGENT = "BureauLeadFinder/1.0 (eigen onderzoek; contact via je-eigen-mail)"
 REQUEST_TIMEOUT = 12
 THROTTLE_SECONDS = 1.5
 MAX_PAGES_PER_SITE = 3
-
-# Onder dit aantal leesbare tekens gaan we ervan uit dat een site te 'dun' is
-# (vaak een zware JavaScript-site die we niet goed kunnen lezen) -> handmatig checken.
 LOW_CONTENT_CHARS = 400
 
 # --- Signaaldetectie ---------------------------------------------------------
@@ -39,33 +36,40 @@ STOCK_DOMAINS = [
     "depositphotos", "unsplash", "pexels", "pixabay", "freepik",
 ]
 
-# Woorden die wijzen op werk dat past bij jouw expertise (food / product / industrie).
+# VOORKEURSWOORDEN: jouw sterkste specialiteit. Deze tellen zwaarder mee
+# (zie WEIGHTS hieronder). Pas deze lijst aan als je focus verschuift.
+PRIORITY_NICHE_KEYWORDS = [
+    "food", "foodfotografie", "culinair", "horeca", "gastronomie",
+    "instore", "in-store", "in store", "in-store fotografie",
+    "displays", "display", "schap", "shopper", "point of sale", "pos-materiaal",
+]
+
+# Algemene niche-woorden die bij jouw expertise passen (tellen normaal mee).
 NICHE_KEYWORDS = [
-    "food", "foodfotografie", "culinair", "horeca",
     "product", "productfotografie", "packaging", "verpakking", "retail",
     "industrie", "industrieel", "machine", "apparatuur", "fabrikant",
     "technisch", "maakindustrie",
     "campagne", "branding", "merk", "visual", "beeld",
 ]
 
-# Woorden die suggereren dat een bureau campagne-/klantwerk levert (= regelmatig beeld nodig).
 WORK_KEYWORDS = [
     "case", "cases", "portfolio", "ons werk", "sterk werk", "projecten",
     "campagne", "merken", "klanten", "opdrachtgever", "opdrachtgevers",
 ]
 
-# Sterk signaal dat ze fotografie zélf in huis doen -> minder snel uitbesteden.
 INHOUSE_KEYWORDS = ["eigen fotostudio", "in-house fotografie", "eigen studio", "huisfotograaf"]
 
 # --- Scoring (0-100) ---------------------------------------------------------
 WEIGHTS = {
     "reachable": 5,
     "uses_stock": 25,
-    "photo_credit": 30,        # NIEUW: noemt een fotograaf bij naam -> koopt fotografie in
+    "photo_credit": 30,
+    "priority_per_keyword": 12,   # voorkeurswoorden (food/instore) tellen dubbel zo zwaar
+    "priority_cap": 36,
     "niche_per_keyword": 6,
     "niche_cap": 24,
     "does_campaign_work": 15,
     "has_contact_email": 15,
     "inhouse_penalty": -20,
-    "review_floor": 30,        # NIEUW: dunne/JS-sites zakken niet onder deze score
+    "review_floor": 30,
 }

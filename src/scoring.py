@@ -26,10 +26,19 @@ def score_lead(signals: dict):
         score += w["uses_stock"]
         reasons.append("Gebruikt stockbeeld (" + ", ".join(signals["used_stock"]) + ")")
 
-    if signals["niche_hits"]:
-        bonus = min(len(signals["niche_hits"]) * w["niche_per_keyword"], w["niche_cap"])
+    # Voorkeurswoorden (food/instore) tellen zwaarder mee.
+    priority = signals.get("priority_hits", [])
+    if priority:
+        bonus = min(len(priority) * w["priority_per_keyword"], w["priority_cap"])
         score += bonus
-        reasons.append("Past bij jouw werk: " + ", ".join(signals["niche_hits"]))
+        reasons.append("Sterke match (jouw specialiteit): " + ", ".join(priority))
+
+    # Overige niche-woorden (zonder de voorkeurswoorden dubbel te tellen).
+    general = [x for x in signals["niche_hits"] if x not in priority]
+    if general:
+        bonus = min(len(general) * w["niche_per_keyword"], w["niche_cap"])
+        score += bonus
+        reasons.append("Past bij jouw werk: " + ", ".join(general))
 
     if signals["does_campaign_work"]:
         score += w["does_campaign_work"]

@@ -51,7 +51,8 @@ def extract_signals_from_html(html: str, base_url: str) -> dict:
         if credit not in photo_credits:
             photo_credits.append(credit)
 
-    # 3) Niche-woorden die bij jouw expertise passen.
+    # 3) Niche-woorden. Voorkeurswoorden (food/instore) apart, want die wegen zwaarder.
+    priority_hits = sorted({kw for kw in config.PRIORITY_NICHE_KEYWORDS if kw in text})
     niche_hits = sorted({kw for kw in config.NICHE_KEYWORDS if kw in text})
 
     # 4) Levert dit bureau campagne-/klantwerk?
@@ -80,6 +81,7 @@ def extract_signals_from_html(html: str, base_url: str) -> dict:
         "text_length": len(text_raw),
         "used_stock": used_stock,
         "photo_credits": photo_credits,
+        "priority_hits": priority_hits,
         "niche_hits": niche_hits,
         "does_campaign_work": does_work,
         "inhouse_photography": inhouse,
@@ -107,7 +109,7 @@ def analyze_website(url: str) -> dict:
     """Haalt de homepage (+ enkele subpagina's) op en bundelt de signalen."""
     result = {
         "reachable": False, "num_images": 0, "text_length": 0, "used_stock": [],
-        "photo_credits": [], "niche_hits": [], "does_campaign_work": False,
+        "photo_credits": [], "priority_hits": [], "niche_hits": [], "does_campaign_work": False,
         "inhouse_photography": False, "emails": [], "low_content": False,
     }
     if not url:
@@ -135,6 +137,7 @@ def analyze_website(url: str) -> dict:
         signals["used_stock"] = list(set(signals["used_stock"]) | set(s["used_stock"]))
         signals["photo_credits"] = list(dict.fromkeys(signals["photo_credits"] + s["photo_credits"]))
         signals["niche_hits"] = sorted(set(signals["niche_hits"]) | set(s["niche_hits"]))
+        signals["priority_hits"] = sorted(set(signals["priority_hits"]) | set(s["priority_hits"]))
         signals["does_campaign_work"] |= s["does_campaign_work"]
         signals["inhouse_photography"] |= s["inhouse_photography"]
         signals["emails"] = sorted(set(signals["emails"]) | set(s["emails"]))
@@ -146,6 +149,7 @@ def analyze_website(url: str) -> dict:
         "text_length": total_text,
         "used_stock": signals["used_stock"],
         "photo_credits": signals["photo_credits"],
+        "priority_hits": signals["priority_hits"],
         "niche_hits": signals["niche_hits"],
         "does_campaign_work": signals["does_campaign_work"],
         "inhouse_photography": signals["inhouse_photography"],

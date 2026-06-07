@@ -66,8 +66,12 @@ Draai je de tool nog eens, dan worden al bekende bureaus (op domein) overgeslage
 
 Alle knoppen zitten in `config.py`:
 - `CITIES` / `SEARCH_TERMS` — waar en waarop je zoekt.
-- `NICHE_KEYWORDS` — woorden die bij jouw expertise passen (food/product/industrie).
-- `WEIGHTS` — hoe zwaar elk signaal meetelt in de score.
+- `PRIORITY_NICHE_KEYWORDS` — jouw sterkste specialiteit (bv. food, instore). Deze
+  woorden tellen zwaarder dan gewone niche-woorden; verschuif je focus door woorden
+  hier toe te voegen of weg te halen.
+- `NICHE_KEYWORDS` — overige woorden die bij je werk passen (product/industrie/enz.).
+- `WEIGHTS` — hoe zwaar elk signaal meetelt. `priority_per_keyword` en `priority_cap`
+  bepalen hoe hard food/instore meewegen.
 
 Bekijk na een eerste run welke bureaus terecht hoog/laag scoren en stel de
 gewichten bij. Dat is de snelste manier om de lijst beter te maken.
