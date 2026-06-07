@@ -1,6 +1,6 @@
 """
 Streamlit CRM dashboard voor bureau-leads.
-Lokaal: data/leads.csv  |  Cloud: Google Sheets (via st.secrets)
+Lokaal: data/leads.csv  |  Cloud: Supabase (via st.secrets)
 Starten: streamlit run app.py
 """
 import sys
@@ -16,11 +16,10 @@ from src.scoring import score_lead
 from src.storage import _domain
 
 try:
-    import gspread
-    from google.oauth2.service_account import Credentials
-    _GSPREAD_OK = True
+    from supabase import create_client
+    _SUPABASE_LIB = True
 except ImportError:
-    _GSPREAD_OK = False
+    _SUPABASE_LIB = False
 
 # ─── Constanten ──────────────────────────────────────────────────────────────
 
@@ -34,28 +33,21 @@ ALL_FIELDS = [
     "status", "notes",
 ]
 
-_USE_SHEETS = _GSPREAD_OK and "gcp_service_account" in st.secrets
+_USE_SUPABASE = _SUPABASE_LIB and "supabase_url" in st.secrets
 
-# ─── Google Sheets helpers ────────────────────────────────────────────────────
+# ─── Supabase helper ──────────────────────────────────────────────────────────
 
 @st.cache_resource
-def _sheets_client():
-    creds = Credentials.from_service_account_info(
-        dict(st.secrets["gcp_service_account"]),
-        scopes=["https://www.googleapis.com/auth/spreadsheets"],
-    )
-    return gspread.authorize(creds)
-
-
-def _get_sheet():
-    return _sheets_client().open_by_key(st.secrets["sheet_id"]).sheet1
+def _db():
+    return create_client(st.secrets["supabase_url"], st.secrets["supabase_key"])
 
 # ─── Data helpers ─────────────────────────────────────────────────────────────
 
 def load_leads() -> pd.DataFrame:
-    if _USE_SHEETS:
-        records = _get_sheet().get_all_records()
-        df = pd.DataFrame(records) if records else pd.DataFrame(columns=ALL_FIELDS)
+    if _USE_SUPABASE:
+        result = _db().table("leads").select("*").order("score", desc=True).execute()
+        df = pd.DataFrame(result.data) if result.data else pd.DataFrame(columns=ALL_FIELDS)
+        df = df.drop(columns=["id"], errors="ignore")
     else:
         if not DATA_PATH.exists():
             return pd.DataFrame(columns=ALL_FIELDS)
@@ -76,11 +68,12 @@ def persist(df: pd.DataFrame):
             out[col] = ""
     out = out[ALL_FIELDS]
 
-    if _USE_SHEETS:
-        sheet = _get_sheet()
-        sheet.clear()
-        values = [ALL_FIELDS] + out.fillna("").astype(str).values.tolist()
-        sheet.update(values)
+    if _USE_SUPABASE:
+        records = out.fillna("").astype(str).to_dict("records")
+        # score terug naar int voor de database
+        for r in records:
+            r["score"] = int(r["score"])
+        _db().table("leads").upsert(records, on_conflict="website").execute()
     else:
         DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
         out.to_csv(DATA_PATH, index=False)
@@ -142,10 +135,7 @@ with st.sidebar:
     if st.button("🔄 Herladen", use_container_width=True):
         st.session_state.df = load_leads()
         st.rerun()
-    if _USE_SHEETS:
-        st.caption("☁️ Opslag: Google Sheets")
-    else:
-        st.caption("💾 Opslag: lokale CSV")
+    st.caption("☁️ Supabase" if _USE_SUPABASE else "💾 Lokale CSV")
 
 # ─── Apply filters ────────────────────────────────────────────────────────────
 
