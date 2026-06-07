@@ -7,8 +7,8 @@ import os
 from urllib.parse import urlparse
 
 FIELDS = [
-    "score", "name", "website", "city", "email",
-    "reasons", "niche_hits", "uses_stock", "phone",
+    "score", "review", "name", "website", "city", "email",
+    "reasons", "photo_credits", "niche_hits", "uses_stock", "phone",
 ]
 
 
@@ -17,7 +17,6 @@ def _domain(url: str) -> str:
 
 
 def load_existing_domains(path: str) -> set:
-    """Welke bureaus (op domein) staan er al in het bestand?"""
     if not os.path.exists(path):
         return set()
     seen = set()

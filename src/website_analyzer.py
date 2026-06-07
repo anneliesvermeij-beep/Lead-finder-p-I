@@ -1,10 +1,12 @@
 """
 Analyseert de website van een bureau op signalen die ertoe doen voor jou:
+- noemen ze een fotograaf bij naam? ("Fotografie: ...") -> koopt fotografie in (sterk!)
 - gebruiken ze stockbeeld? (kans)
 - noemen ze food/product/industrie? (past bij jou)
-- doen ze campagne-/cases-werk? (hebben regelmatig beeld nodig)
+- doen ze campagne-/klantwerk? (hebben regelmatig beeld nodig)
 - is er een contact-mailadres? (direct te benaderen)
 - doen ze fotografie zelf in huis? (minder snel uitbesteden)
+- is de site te 'dun' om te lezen? (vaak JS-site -> handmatig checken)
 
 De zware logica zit in extract_signals_from_html(), die puur op een HTML-string
 werkt. Daardoor is hij los te testen zonder internet.
@@ -18,16 +20,23 @@ import config
 from src.scraper_utils import polite_get
 
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
-# Adressen die we negeren (voorbeelden, afbeeldingen die op een mail lijken, enz.)
 EMAIL_NOISE = ("example.", "sentry.", "@2x", ".png", ".jpg", ".webp")
+
+# Herkent een fotocredit zoals "Fotografie: Goffe Struiksma" of "Foto: Jan Jansen".
+# Eis: een label, dan dubbele punt/streepje, dan een naam met hoofdletter.
+PHOTO_CREDIT_RE = re.compile(
+    r"\b((?i:fotografie|fotograaf|photography|photo|foto|beeld))\s*[:\-–]\s*"
+    r"([A-ZÀ-Þ][\wÀ-ÿ]+(?:\s+[A-ZÀ-Þ][\wÀ-ÿ]+)?)"
+)
 
 
 def extract_signals_from_html(html: str, base_url: str) -> dict:
     """Haalt alle signalen uit één HTML-pagina. Pure functie, geen netwerk."""
     soup = BeautifulSoup(html, "html.parser")
-    text = soup.get_text(separator=" ", strip=True).lower()
+    text_raw = soup.get_text(separator=" ", strip=True)   # met hoofdletters (voor namen)
+    text = text_raw.lower()
 
-    # 1) Stockbeeld? Kijk naar img-bronnen en links.
+    # 1) Stockbeeld?
     used_stock = []
     for tag in soup.find_all(["img", "source", "a"]):
         src = (tag.get("src") or tag.get("srcset") or tag.get("href") or "").lower()
@@ -35,16 +44,23 @@ def extract_signals_from_html(html: str, base_url: str) -> dict:
             if dom in src and dom not in used_stock:
                 used_stock.append(dom)
 
-    # 2) Niche-woorden die bij jouw expertise passen.
+    # 2) Fotocredits ("Fotografie: Naam") -> bewijs dat ze fotografie inkopen.
+    photo_credits = []
+    for label, name in PHOTO_CREDIT_RE.findall(text_raw):
+        credit = f"{label}: {name}"
+        if credit not in photo_credits:
+            photo_credits.append(credit)
+
+    # 3) Niche-woorden die bij jouw expertise passen.
     niche_hits = sorted({kw for kw in config.NICHE_KEYWORDS if kw in text})
 
-    # 3) Levert dit bureau campagne-/productiewerk?
+    # 4) Levert dit bureau campagne-/klantwerk?
     does_work = any(kw in text for kw in config.WORK_KEYWORDS)
 
-    # 4) Doen ze fotografie zelf in huis?
+    # 5) Doen ze fotografie zelf in huis?
     inhouse = any(kw in text for kw in config.INHOUSE_KEYWORDS)
 
-    # 5) Contact-mailadressen (publiek op de site).
+    # 6) Contact-mailadressen.
     emails = set()
     for mail in EMAIL_RE.findall(html):
         low = mail.lower()
@@ -56,12 +72,14 @@ def extract_signals_from_html(html: str, base_url: str) -> dict:
             if addr and not any(n in addr for n in EMAIL_NOISE):
                 emails.add(addr)
 
-    # 6) Interne links naar relevante pagina's (cases/diensten/contact) om verder te kijken.
+    # 7) Interne links naar relevante pagina's om verder te kijken.
     internal_links = _relevant_internal_links(soup, base_url)
 
     return {
         "num_images": len(soup.find_all("img")),
+        "text_length": len(text_raw),
         "used_stock": used_stock,
+        "photo_credits": photo_credits,
         "niche_hits": niche_hits,
         "does_campaign_work": does_work,
         "inhouse_photography": inhouse,
@@ -71,9 +89,8 @@ def extract_signals_from_html(html: str, base_url: str) -> dict:
 
 
 def _relevant_internal_links(soup, base_url):
-    """Vindt links op dezelfde site naar cases/diensten/contact-achtige pagina's."""
     targets = ("case", "werk", "portfolio", "dienst", "service",
-               "contact", "over", "about", "project")
+               "contact", "over", "about", "project", "merk", "klant")
     domain = urlparse(base_url).netloc
     found = []
     for a in soup.find_all("a", href=True):
@@ -89,13 +106,12 @@ def _relevant_internal_links(soup, base_url):
 def analyze_website(url: str) -> dict:
     """Haalt de homepage (+ enkele subpagina's) op en bundelt de signalen."""
     result = {
-        "reachable": False, "num_images": 0, "used_stock": [],
-        "niche_hits": [], "does_campaign_work": False,
-        "inhouse_photography": False, "emails": [],
+        "reachable": False, "num_images": 0, "text_length": 0, "used_stock": [],
+        "photo_credits": [], "niche_hits": [], "does_campaign_work": False,
+        "inhouse_photography": False, "emails": [], "low_content": False,
     }
     if not url:
         return result
-
     if not url.startswith("http"):
         url = "https://" + url
 
@@ -105,8 +121,8 @@ def analyze_website(url: str) -> dict:
 
     result["reachable"] = True
     signals = extract_signals_from_html(home.text, url)
+    total_text = signals["text_length"]
 
-    # Bekijk een paar relevante subpagina's mee (cases/contact e.d.).
     pages_seen = 1
     for link in signals["internal_links"]:
         if pages_seen >= config.MAX_PAGES_PER_SITE:
@@ -115,21 +131,25 @@ def analyze_website(url: str) -> dict:
         pages_seen += 1
         if sub is None:
             continue
-        sub_signals = extract_signals_from_html(sub.text, link)
-        # Voeg de signalen samen (set-achtig).
-        signals["used_stock"] = list(set(signals["used_stock"]) | set(sub_signals["used_stock"]))
-        signals["niche_hits"] = sorted(set(signals["niche_hits"]) | set(sub_signals["niche_hits"]))
-        signals["does_campaign_work"] |= sub_signals["does_campaign_work"]
-        signals["inhouse_photography"] |= sub_signals["inhouse_photography"]
-        signals["emails"] = sorted(set(signals["emails"]) | set(sub_signals["emails"]))
-        result["num_images"] += sub_signals["num_images"]
+        s = extract_signals_from_html(sub.text, link)
+        signals["used_stock"] = list(set(signals["used_stock"]) | set(s["used_stock"]))
+        signals["photo_credits"] = list(dict.fromkeys(signals["photo_credits"] + s["photo_credits"]))
+        signals["niche_hits"] = sorted(set(signals["niche_hits"]) | set(s["niche_hits"]))
+        signals["does_campaign_work"] |= s["does_campaign_work"]
+        signals["inhouse_photography"] |= s["inhouse_photography"]
+        signals["emails"] = sorted(set(signals["emails"]) | set(s["emails"]))
+        result["num_images"] += s["num_images"]
+        total_text += s["text_length"]
 
     result.update({
         "num_images": result["num_images"] + signals["num_images"],
+        "text_length": total_text,
         "used_stock": signals["used_stock"],
+        "photo_credits": signals["photo_credits"],
         "niche_hits": signals["niche_hits"],
         "does_campaign_work": signals["does_campaign_work"],
         "inhouse_photography": signals["inhouse_photography"],
         "emails": signals["emails"],
+        "low_content": total_text < config.LOW_CONTENT_CHARS,
     })
     return result

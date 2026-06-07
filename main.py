@@ -52,15 +52,17 @@ def build(agencies: list, out_path: str):
     for i, a in enumerate(new, 1):
         print(f"[{i}/{len(new)}] {a['name'] or a['website']}")
         signals = analyze_website(a["website"])
-        score, reasons = score_lead(signals)
+        score, reasons, needs_review = score_lead(signals)
         leads.append({
             "score": score,
+            "review": "ja" if needs_review else "",
             "name": a.get("name", ""),
             "website": a["website"],
             "city": a.get("city", ""),
             "phone": a.get("phone", ""),
             "email": signals["emails"][0] if signals["emails"] else "",
             "reasons": "; ".join(reasons),
+            "photo_credits": ", ".join(signals.get("photo_credits", [])),
             "niche_hits": ", ".join(signals["niche_hits"]),
             "uses_stock": ", ".join(signals["used_stock"]),
         })

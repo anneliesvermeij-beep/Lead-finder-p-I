@@ -5,7 +5,6 @@ te tunen zonder de rest van de code aan te raken.
 
 # --- Ontdekking (Google Places) ---------------------------------------------
 
-# Zoektermen waarmee we bureaus zoeken. Voeg gerust toe of haal weg.
 SEARCH_TERMS = [
     "reclamebureau",
     "marketingbureau",
@@ -15,8 +14,6 @@ SEARCH_TERMS = [
     "branding bureau",
 ]
 
-# Steden die we afgaan om heel Nederland te dekken. Places geeft per zoekopdracht
-# maximaal ~60 resultaten, dus we zoeken per stad. Breid uit waar je meer dekking wilt.
 CITIES = [
     "Amsterdam", "Rotterdam", "Den Haag", "Utrecht", "Eindhoven",
     "Groningen", "Tilburg", "Almere", "Breda", "Nijmegen",
@@ -27,14 +24,16 @@ CITIES = [
 # --- Verzoeken (netjes scrapen) ----------------------------------------------
 
 USER_AGENT = "BureauLeadFinder/1.0 (eigen onderzoek; contact via je-eigen-mail)"
-REQUEST_TIMEOUT = 12          # seconden
-THROTTLE_SECONDS = 1.5        # minimale pauze tussen twee verzoeken naar het web
-MAX_PAGES_PER_SITE = 3        # hoeveel pagina's per bureau-site we maximaal bekijken
+REQUEST_TIMEOUT = 12
+THROTTLE_SECONDS = 1.5
+MAX_PAGES_PER_SITE = 3
+
+# Onder dit aantal leesbare tekens gaan we ervan uit dat een site te 'dun' is
+# (vaak een zware JavaScript-site die we niet goed kunnen lezen) -> handmatig checken.
+LOW_CONTENT_CHARS = 400
 
 # --- Signaaldetectie ---------------------------------------------------------
 
-# Als een site afbeeldingen van deze domeinen gebruikt, werken ze (deels) met
-# stockbeeld -> kans voor jou.
 STOCK_DOMAINS = [
     "shutterstock", "istockphoto", "gettyimages", "stock.adobe",
     "depositphotos", "unsplash", "pexels", "pixabay", "freepik",
@@ -44,25 +43,29 @@ STOCK_DOMAINS = [
 NICHE_KEYWORDS = [
     "food", "foodfotografie", "culinair", "horeca",
     "product", "productfotografie", "packaging", "verpakking", "retail",
-    "industrie", "industrieel", "machine", "technisch", "maakindustrie",
+    "industrie", "industrieel", "machine", "apparatuur", "fabrikant",
+    "technisch", "maakindustrie",
     "campagne", "branding", "merk", "visual", "beeld",
 ]
 
-# Woorden die suggereren dat een bureau campagne-/productiewerk levert
-# (dus regelmatig beeld nodig heeft).
-WORK_KEYWORDS = ["case", "cases", "portfolio", "ons werk", "projecten", "campagne"]
+# Woorden die suggereren dat een bureau campagne-/klantwerk levert (= regelmatig beeld nodig).
+WORK_KEYWORDS = [
+    "case", "cases", "portfolio", "ons werk", "sterk werk", "projecten",
+    "campagne", "merken", "klanten", "opdrachtgever", "opdrachtgevers",
+]
 
 # Sterk signaal dat ze fotografie zélf in huis doen -> minder snel uitbesteden.
 INHOUSE_KEYWORDS = ["eigen fotostudio", "in-house fotografie", "eigen studio", "huisfotograaf"]
 
 # --- Scoring (0-100) ---------------------------------------------------------
-# Tune deze gewichten op basis van wat in de praktijk goede leads blijken.
 WEIGHTS = {
-    "reachable": 5,            # site werkt
-    "uses_stock": 30,          # gebruikt stockbeeld -> opening
-    "niche_per_keyword": 6,    # per gevonden niche-woord
-    "niche_cap": 24,           # maximum dat niche-woorden mogen opleveren
-    "does_campaign_work": 15,  # heeft cases/portfolio
-    "has_contact_email": 15,   # je kunt ze direct mailen
-    "inhouse_penalty": -20,    # doen fotografie zelf
+    "reachable": 5,
+    "uses_stock": 25,
+    "photo_credit": 30,        # NIEUW: noemt een fotograaf bij naam -> koopt fotografie in
+    "niche_per_keyword": 6,
+    "niche_cap": 24,
+    "does_campaign_work": 15,
+    "has_contact_email": 15,
+    "inhouse_penalty": -20,
+    "review_floor": 30,        # NIEUW: dunne/JS-sites zakken niet onder deze score
 }
