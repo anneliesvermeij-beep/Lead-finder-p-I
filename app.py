@@ -132,9 +132,7 @@ if "df" not in st.session_state:
 with st.sidebar:
     st.title("🔍 Filters")
     status_filter = st.multiselect("Status", STATUSES, default=STATUSES)
-    score_range = st.slider("Score bereik", 0, 100, (0, 100), step=5)
     niche_kw = st.text_input("Specialiteit zoekwoord", placeholder="food, retail …")
-    review_only = st.checkbox("Alleen JS/dunne sites ⚠️")
     st.divider()
     if st.button("🔄 Herladen", use_container_width=True):
         st.session_state.df = load_leads()
@@ -145,15 +143,13 @@ with st.sidebar:
 
 df: pd.DataFrame = st.session_state.df
 
-mask = df["status"].isin(status_filter) & df["score"].between(*score_range)
+mask = df["status"].isin(status_filter)
 if niche_kw:
     kw = niche_kw.lower()
     mask &= (
         df["niche_hits"].str.lower().str.contains(kw, na=False)
         | df["reasons"].str.lower().str.contains(kw, na=False)
     )
-if review_only:
-    mask &= df["review"] == "ja"
 
 df_view = df[mask].copy()
 
