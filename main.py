@@ -63,7 +63,12 @@ def build(agencies: list, out_path: str):
             "email": signals["emails"][0] if signals["emails"] else "",
             "reasons": "; ".join(reasons),
             "photo_credits": ", ".join(signals.get("photo_credits", [])),
-            "niche_hits": ", ".join(signals["niche_hits"]),
+            # Specialiteit-woorden: voorkeur (food/instore) + niche + beeld samen.
+            "niche_hits": ", ".join(dict.fromkeys(
+                signals.get("priority_hits", [])
+                + signals.get("visual_hits", [])
+                + signals["niche_hits"]
+            )),
             "uses_stock": ", ".join(signals["used_stock"]),
         })
         print(f"      score {score} - {'; '.join(reasons)}")

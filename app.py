@@ -108,7 +108,11 @@ def run_analyzer(url: str, name: str) -> tuple:
         "email": signals["emails"][0] if signals["emails"] else "",
         "reasons": "; ".join(reasons),
         "photo_credits": ", ".join(signals.get("photo_credits", [])),
-        "niche_hits": ", ".join(signals["niche_hits"]),
+        "niche_hits": ", ".join(dict.fromkeys(
+            signals.get("priority_hits", [])
+            + signals.get("visual_hits", [])
+            + signals["niche_hits"]
+        )),
         "uses_stock": ", ".join(signals["used_stock"]),
         "status": STATUSES[0],
         "notes": "",
@@ -129,7 +133,7 @@ with st.sidebar:
     st.title("🔍 Filters")
     status_filter = st.multiselect("Status", STATUSES, default=STATUSES)
     score_range = st.slider("Score bereik", 0, 100, (0, 100), step=5)
-    niche_kw = st.text_input("Niche zoekwoord", placeholder="food, retail …")
+    niche_kw = st.text_input("Specialiteit zoekwoord", placeholder="food, retail …")
     review_only = st.checkbox("Alleen JS/dunne sites ⚠️")
     st.divider()
     if st.button("🔄 Herladen", use_container_width=True):
@@ -223,7 +227,7 @@ else:
             "website": st.column_config.LinkColumn("Website", width=175),
             "city": st.column_config.TextColumn("Stad", width=95),
             "email": st.column_config.TextColumn("E-mail", width=170),
-            "niche_hits": st.column_config.TextColumn("Niche", width=135),
+            "niche_hits": st.column_config.TextColumn("Specialiteit", width=160),
             "status": st.column_config.SelectboxColumn(
                 "Status", options=STATUSES, width=155, required=True
             ),
@@ -255,7 +259,7 @@ else:
                 st.markdown(f"**Website:** [{row['website']}]({row['website']})")
                 st.markdown(f"**Stad:** {row['city'] or '—'}")
                 st.markdown(f"**E-mail:** {row['email'] or '—'}")
-                st.markdown(f"**Niche hits:** {row['niche_hits'] or '—'}")
+                st.markdown(f"**Specialiteit:** {row['niche_hits'] or '—'}")
                 st.markdown(f"**Stockbeeld:** {row['uses_stock'] or 'geen'}")
             with right:
                 st.markdown(f"**Redenen:** {row['reasons'] or '—'}")
