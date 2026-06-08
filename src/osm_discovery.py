@@ -21,13 +21,17 @@ OVERPASS_ENDPOINTS = [
 
 # OSM-tags die op een reclame-/ontwerp-/marketingbureau wijzen.
 OSM_QUERY = """
-[out:json][timeout:180];
+[out:json][timeout:240];
 area["ISO3166-1"="NL"][admin_level=2]->.nl;
 (
   nwr["office"="advertising_agency"](area.nl);
   nwr["office"="graphic_design"](area.nl);
   nwr["office"="marketing"](area.nl);
+  nwr["office"="design"](area.nl);
   nwr["shop"="advertising"](area.nl);
+  nwr["craft"="designer"](area.nl);
+  nwr["name"~"reclamebureau|ontwerpbureau|designbureau|creatief|communicatiebureau|branding|grafisch ontwerp",i]["website"](area.nl);
+  nwr["name"~"design studio|creative studio|reclame studio|ontwerpstudio",i]["website"](area.nl);
 );
 out tags center;
 """

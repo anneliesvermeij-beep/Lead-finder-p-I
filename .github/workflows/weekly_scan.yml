@@ -35,4 +35,5 @@ jobs:
           python main.py --seed data/seed_groot.csv
           python main.py --seed data/seed_uitbreiding.csv
           python main.py --seed data/seed_awards.csv
+          python main.py --seed data/seed_directories.csv
           python cleanup_leads.py
