@@ -81,6 +81,8 @@ def main():
     parser.add_argument("--discover", action="store_true", help="Ontdek bureaus via Google Places")
     parser.add_argument("--osm", action="store_true",
                         help="Ontdek bureaus via OpenStreetMap (gratis, geen sleutel)")
+    parser.add_argument("--dda", action="store_true",
+                        help="Ontdek bureaus via Dutch Digital Agencies-leden")
     parser.add_argument("--seed", metavar="CSV", help="Analyseer sites uit een eigen CSV")
     parser.add_argument("--out", default="data/leads.csv", help="Uitvoerbestand (CSV)")
     args = parser.parse_args()
@@ -88,6 +90,10 @@ def main():
     if args.osm:
         from src.osm_discovery import discover_agencies_osm
         agencies = discover_agencies_osm()
+        build(agencies, args.out)
+    elif args.dda:
+        from src.dda_discovery import discover_agencies_dda
+        agencies = discover_agencies_dda()
         build(agencies, args.out)
     elif args.discover:
         api_key = os.getenv("GOOGLE_PLACES_API_KEY")
