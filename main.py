@@ -79,11 +79,17 @@ def build(agencies: list, out_path: str):
 def main():
     parser = argparse.ArgumentParser(description="Vind reclamebureaus als fotografie-leads.")
     parser.add_argument("--discover", action="store_true", help="Ontdek bureaus via Google Places")
+    parser.add_argument("--osm", action="store_true",
+                        help="Ontdek bureaus via OpenStreetMap (gratis, geen sleutel)")
     parser.add_argument("--seed", metavar="CSV", help="Analyseer sites uit een eigen CSV")
     parser.add_argument("--out", default="data/leads.csv", help="Uitvoerbestand (CSV)")
     args = parser.parse_args()
 
-    if args.discover:
+    if args.osm:
+        from src.osm_discovery import discover_agencies_osm
+        agencies = discover_agencies_osm()
+        build(agencies, args.out)
+    elif args.discover:
         api_key = os.getenv("GOOGLE_PLACES_API_KEY")
         if not api_key:
             print("Geen GOOGLE_PLACES_API_KEY gevonden. Zet die in .env "
