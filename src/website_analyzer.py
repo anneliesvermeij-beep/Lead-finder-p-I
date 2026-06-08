@@ -29,7 +29,7 @@ EMAIL_NOISE = (
 # Eis: een label, dan dubbele punt/streepje, dan TWEE woorden met een hoofdletter
 # (voor- en achternaam) -> filtert losse onzin als "Foto: Beeld" eruit.
 PHOTO_CREDIT_RE = re.compile(
-    r"\b((?i:fotografie|fotograaf|photography|photographer))\s*[:\-–]\s*"
+    r"\b((?i:fotografie|fotograaf|photography|photographer|foto|photo|beeld))\s*[:\-–]\s*"
     r"([A-ZÀ-Þ][a-zà-ÿ]+\s+[A-ZÀ-Þ][a-zà-ÿ]+)"
 )
 
@@ -56,6 +56,19 @@ def _is_echte_naam(naam: str) -> bool:
     return True
 
 
+def _zoek_woorden(text: str, keywords) -> list:
+    """Geeft de keywords terug die als héél woord/zinsdeel in de tekst staan.
+    Zo matcht 'ict' niet binnen 'gericht' en 'beeld' niet binnen 'afbeelding'.
+    (text moet al lowercase zijn.)
+    """
+    hits = []
+    for kw in keywords:
+        patroon = r"(?<![a-z0-9])" + re.escape(kw.lower().strip()) + r"(?![a-z0-9])"
+        if re.search(patroon, text):
+            hits.append(kw.strip())
+    return sorted(set(hits))
+
+
 def extract_signals_from_html(html: str, base_url: str) -> dict:
     """Haalt alle signalen uit één HTML-pagina. Pure functie, geen netwerk."""
     soup = BeautifulSoup(html, "html.parser")
@@ -80,9 +93,13 @@ def extract_signals_from_html(html: str, base_url: str) -> dict:
         if credit not in photo_credits:
             photo_credits.append(credit)
 
-    # 3) Niche-woorden. Voorkeurswoorden (food/instore) apart, want die wegen zwaarder.
-    priority_hits = sorted({kw for kw in config.PRIORITY_NICHE_KEYWORDS if kw in text})
-    niche_hits = sorted({kw for kw in config.NICHE_KEYWORDS if kw in text})
+    # 3) Niche-woorden. Op héle woorden matchen, zodat "ict" niet in "gericht"
+    #    en "beeld" niet in "afbeelding" wordt gevonden. Voorkeurswoorden
+    #    (food/instore) apart, want die wegen zwaarder.
+    priority_hits = _zoek_woorden(text, config.PRIORITY_NICHE_KEYWORDS)
+    niche_hits = _zoek_woorden(text, config.NICHE_KEYWORDS)
+    visual_hits = _zoek_woorden(text, config.VISUAL_KEYWORDS)
+    negative_hits = _zoek_woorden(text, config.NEGATIVE_KEYWORDS)
 
     # 4) Levert dit bureau campagne-/klantwerk?
     does_work = any(kw in text for kw in config.WORK_KEYWORDS)
@@ -116,6 +133,8 @@ def extract_signals_from_html(html: str, base_url: str) -> dict:
         "photo_credits": photo_credits,
         "priority_hits": priority_hits,
         "niche_hits": niche_hits,
+        "visual_hits": visual_hits,
+        "negative_hits": negative_hits,
         "does_campaign_work": does_work,
         "inhouse_photography": inhouse,
         "emails": sorted(emails),
@@ -168,7 +187,8 @@ def analyze_website(url: str) -> dict:
     """Haalt de homepage (+ enkele subpagina's) op en bundelt de signalen."""
     result = {
         "reachable": False, "num_images": 0, "text_length": 0, "used_stock": [],
-        "photo_credits": [], "priority_hits": [], "niche_hits": [], "does_campaign_work": False,
+        "photo_credits": [], "priority_hits": [], "niche_hits": [], "visual_hits": [],
+        "negative_hits": [], "does_campaign_work": False,
         "inhouse_photography": False, "emails": [], "low_content": False,
     }
     if not url:
@@ -202,6 +222,8 @@ def analyze_website(url: str) -> dict:
         signals["photo_credits"] = list(dict.fromkeys(signals["photo_credits"] + s["photo_credits"]))
         signals["niche_hits"] = sorted(set(signals["niche_hits"]) | set(s["niche_hits"]))
         signals["priority_hits"] = sorted(set(signals["priority_hits"]) | set(s["priority_hits"]))
+        signals["visual_hits"] = sorted(set(signals["visual_hits"]) | set(s["visual_hits"]))
+        signals["negative_hits"] = sorted(set(signals["negative_hits"]) | set(s["negative_hits"]))
         signals["does_campaign_work"] |= s["does_campaign_work"]
         signals["inhouse_photography"] |= s["inhouse_photography"]
         signals["emails"] = sorted(set(signals["emails"]) | set(s["emails"]))
@@ -215,6 +237,8 @@ def analyze_website(url: str) -> dict:
         "photo_credits": signals["photo_credits"],
         "priority_hits": signals["priority_hits"],
         "niche_hits": signals["niche_hits"],
+        "visual_hits": signals["visual_hits"],
+        "negative_hits": signals["negative_hits"],
         "does_campaign_work": signals["does_campaign_work"],
         "inhouse_photography": signals["inhouse_photography"],
         "emails": signals["emails"],

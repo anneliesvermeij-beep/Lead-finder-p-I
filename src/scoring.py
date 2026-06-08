@@ -40,6 +40,22 @@ def score_lead(signals: dict):
         score += bonus
         reasons.append("Past bij jouw werk: " + ", ".join(general))
 
+    # Beeld-/fotografiefocus: sterkste teken dat ze fotografie nodig hebben.
+    visual = signals.get("visual_hits", [])
+    if visual:
+        bonus = min(len(visual) * w["visual_per_keyword"], w["visual_cap"])
+        score += bonus
+        reasons.append("Beeld-/fotografiefocus: " + ", ".join(visual))
+
+    # Research-/tech-/platformbureau: kopen zelden fotografie in -> aftrek.
+    # Maar: een bureau met duidelijke beeldfocus (2+ visual-woorden) straffen we
+    # niet voor een incidentele 'platform'-vermelding; alleen echte tech-bureaus.
+    negative = signals.get("negative_hits", [])
+    if negative and len(visual) < 2:
+        straf = max(len(negative) * w["negative_per_keyword"], w["negative_cap"])
+        score += straf
+        reasons.append("Minder passend (research/tech/platform): " + ", ".join(negative))
+
     if signals["does_campaign_work"]:
         score += w["does_campaign_work"]
         reasons.append("Levert campagne-/klantwerk")

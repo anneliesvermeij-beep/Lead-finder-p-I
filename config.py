@@ -59,7 +59,33 @@ WORK_KEYWORDS = [
     "campagne", "merken", "klanten", "opdrachtgever", "opdrachtgevers",
 ]
 
+# BEELD-FOCUS: bureaus die hier vol op zitten kopen het vaakst fotografie in.
+# Deze woorden geven een stevige bonus (zie WEIGHTS).
+VISUAL_KEYWORDS = [
+    "fotografie", "fotograaf", "photography", "beeld", "beeldbank", "beeldtaal",
+    "visual", "visuals", "art direction", "artdirection", "styling", "stylist",
+    "campagnebeeld", "fotostudio", "filmproductie", "videoproductie", "contentcreatie",
+    "content creatie", "creatie", "creative studio", "merkbeeld", "fotoshoot", "shoot",
+]
+
+# NIET-PASSEND: research-, tech-, en platformbureaus kopen zelden fotografie in.
+# Deze woorden geven een aftrek, zodat ze onder jouw beeldbureaus zakken.
+NEGATIVE_KEYWORDS = [
+    "marktonderzoek", "onderzoeksbureau", "research", "data science", "datascience",
+    "software development", "webdevelopment", "development", "developers",
+    "hosting", "webhosting", "seo", "sea ", "e-commerce platform", "webshop laten maken",
+    "recruitment", "detachering", "platform", "cloud", "cybersecurity", "saas",
+    "ict", "app laten bouwen", "marktplaats",
+]
+
 INHOUSE_KEYWORDS = ["eigen fotostudio", "in-house fotografie", "eigen studio", "huisfotograaf"]
+
+# Geen bureaus: marktplaatsen, portals, pure tech/research-bedrijven die door
+# toeval beeld-woorden op hun site hebben. Deze domeinen worden uitgesloten.
+NON_AGENCY_DOMAINS = [
+    "marktplaats.nl", "blauw.com", "funda.nl", "bol.com", "google.com",
+    "facebook.com", "linkedin.com", "wikipedia.org", "kvk.nl", "ster.nl",
+]
 
 # --- Scoring (0-100) ---------------------------------------------------------
 WEIGHTS = {
@@ -72,6 +98,10 @@ WEIGHTS = {
     "niche_cap": 24,
     "does_campaign_work": 15,
     "has_contact_email": 15,
+    "visual_per_keyword": 9,      # beeld/fotografie-focus: stevige bonus
+    "visual_cap": 27,
+    "negative_per_keyword": -12,  # research/tech/platform: aftrek
+    "negative_cap": -36,
     "inhouse_penalty": -20,
     "review_floor": 30,
 }
