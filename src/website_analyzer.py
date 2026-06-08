@@ -23,6 +23,7 @@ EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 EMAIL_NOISE = (
     "example.", "sentry", "wixpress", "@2x", ".png", ".jpg", ".jpeg", ".webp",
     "@domain.com", "user@", "@sentry", "@email.com", "name@", "yourname@",
+    "gebruiker@", "domein.com", "jouwnaam@", "voorbeeld@", "@example", "test@",
 )
 
 # Herkent een fotocredit zoals "Fotografie: Goffe Struiksma" of "Foto: Jan Jansen".
