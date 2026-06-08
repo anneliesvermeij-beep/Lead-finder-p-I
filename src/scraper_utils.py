@@ -49,15 +49,26 @@ def _robots_allows(url: str) -> bool:
 def polite_get(url: str):
     """
     Haalt een pagina op met respect voor robots.txt en snelheidsrem.
+    Volgt redirects, accepteert HTML-pagina's ook zonder nette Content-Type,
+    en probeert het bij een time-out/netwerkfout één keer opnieuw.
     Geeft de requests.Response terug, of None als het niet mag/lukt.
     """
     if not _robots_allows(url):
         return None
-    _throttle()
-    try:
-        resp = _session.get(url, timeout=config.REQUEST_TIMEOUT)
-        if resp.status_code == 200 and "text/html" in resp.headers.get("Content-Type", ""):
-            return resp
-    except requests.RequestException:
-        return None
+
+    for poging in range(2):  # één retry bij tijdelijke fouten
+        _throttle()
+        try:
+            resp = _session.get(url, timeout=config.REQUEST_TIMEOUT, allow_redirects=True)
+            ctype = resp.headers.get("Content-Type", "").lower()
+            # Accepteer als het HTML is, of als de server geen type meldt maar
+            # de inhoud op HTML lijkt (veel bureausites zetten geen header).
+            looks_html = "html" in ctype or (not ctype and "<html" in resp.text[:2000].lower())
+            if resp.status_code == 200 and looks_html:
+                return resp
+            return None  # 404/403 etc.: opnieuw proberen heeft geen zin
+        except requests.RequestException:
+            if poging == 0:
+                continue  # tweede poging
+            return None
     return None

@@ -20,14 +20,40 @@ import config
 from src.scraper_utils import polite_get
 
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
-EMAIL_NOISE = ("example.", "sentry.", "@2x", ".png", ".jpg", ".webp")
+EMAIL_NOISE = (
+    "example.", "sentry", "wixpress", "@2x", ".png", ".jpg", ".jpeg", ".webp",
+    "@domain.com", "user@", "@sentry", "@email.com", "name@", "yourname@",
+)
 
 # Herkent een fotocredit zoals "Fotografie: Goffe Struiksma" of "Foto: Jan Jansen".
-# Eis: een label, dan dubbele punt/streepje, dan een naam met hoofdletter.
+# Eis: een label, dan dubbele punt/streepje, dan TWEE woorden met een hoofdletter
+# (voor- en achternaam) -> filtert losse onzin als "Foto: Beeld" eruit.
 PHOTO_CREDIT_RE = re.compile(
-    r"\b((?i:fotografie|fotograaf|photography|photo|foto|beeld))\s*[:\-–]\s*"
-    r"([A-ZÀ-Þ][\wÀ-ÿ]+(?:\s+[A-ZÀ-Þ][\wÀ-ÿ]+)?)"
+    r"\b((?i:fotografie|fotograaf|photography|photographer))\s*[:\-–]\s*"
+    r"([A-ZÀ-Þ][a-zà-ÿ]+\s+[A-ZÀ-Þ][a-zà-ÿ]+)"
 )
+
+# Woorden die op een naam lijken maar het niet zijn: als één van beide
+# naamdelen hierin zit (of erop eindigt), is het geen echte fotocredit.
+_NIET_NAAM = {
+    "website", "websiteontwikkeling", "ontwikkeling", "duitstalig", "engelstalig",
+    "beeld", "design", "fotografie", "video", "tekst", "concept", "campagne",
+    "studio", "bureau", "agency", "media", "creatie", "branding", "online",
+    "marketing", "communicatie", "webdesign", "drukwerk", "copyright",
+}
+_NIET_NAAM_EINDE = ("ontwikkeling", "talig", "bureau", "design", "fotografie")
+
+
+def _is_echte_naam(naam: str) -> bool:
+    """True als 'Voornaam Achternaam' op een echte persoonsnaam lijkt."""
+    delen = naam.split()
+    if len(delen) != 2:
+        return False
+    for d in delen:
+        low = d.lower()
+        if low in _NIET_NAAM or low.endswith(_NIET_NAAM_EINDE):
+            return False
+    return True
 
 
 def extract_signals_from_html(html: str, base_url: str) -> dict:
@@ -45,8 +71,11 @@ def extract_signals_from_html(html: str, base_url: str) -> dict:
                 used_stock.append(dom)
 
     # 2) Fotocredits ("Fotografie: Naam") -> bewijs dat ze fotografie inkopen.
+    #    Alleen tellen als de naam echt op een persoonsnaam lijkt.
     photo_credits = []
     for label, name in PHOTO_CREDIT_RE.findall(text_raw):
+        if not _is_echte_naam(name):
+            continue
         credit = f"{label}: {name}"
         if credit not in photo_credits:
             photo_credits.append(credit)
@@ -62,14 +91,18 @@ def extract_signals_from_html(html: str, base_url: str) -> dict:
     inhouse = any(kw in text for kw in config.INHOUSE_KEYWORDS)
 
     # 6) Contact-mailadressen.
+    def _schoon(addr: str) -> str:
+        # Strip URL-encoding (%20) en losse rommel aan de randen.
+        return addr.replace("%20", "").strip(" .,-").lower()
+
     emails = set()
     for mail in EMAIL_RE.findall(html):
-        low = mail.lower()
-        if not any(n in low for n in EMAIL_NOISE):
+        low = _schoon(mail)
+        if low and not any(n in low for n in EMAIL_NOISE):
             emails.add(low)
     for a in soup.find_all("a", href=True):
         if a["href"].lower().startswith("mailto:"):
-            addr = a["href"][7:].split("?")[0].strip().lower()
+            addr = _schoon(a["href"][7:].split("?")[0])
             if addr and not any(n in addr for n in EMAIL_NOISE):
                 emails.add(addr)
 
@@ -105,6 +138,32 @@ def _relevant_internal_links(soup, base_url):
     return found[: config.MAX_PAGES_PER_SITE]
 
 
+def _url_varianten(url: str):
+    """Geeft te proberen URL-varianten in volgorde van waarschijnlijkheid.
+    Zo vangen we 'niet bereikbaar' op die eigenlijk http/https of www betreft.
+    """
+    url = url.strip().rstrip("/")
+    # Haal een eventueel schema en www. weg om de kale host te krijgen.
+    kaal = re.sub(r"^https?://", "", url, flags=re.I)
+    kaal = re.sub(r"^www\.", "", kaal, flags=re.I)
+    varianten = [
+        "https://" + kaal,
+        "https://www." + kaal,
+        "http://" + kaal,
+        "http://www." + kaal,
+    ]
+    # Behoud een eventueel oorspronkelijk volledig adres vooraan.
+    if url.lower().startswith("http") and url not in varianten:
+        varianten.insert(0, url)
+    # Ontdubbel met behoud van volgorde.
+    gezien, uniek = set(), []
+    for v in varianten:
+        if v not in gezien:
+            gezien.add(v)
+            uniek.append(v)
+    return uniek
+
+
 def analyze_website(url: str) -> dict:
     """Haalt de homepage (+ enkele subpagina's) op en bundelt de signalen."""
     result = {
@@ -114,10 +173,15 @@ def analyze_website(url: str) -> dict:
     }
     if not url:
         return result
-    if not url.startswith("http"):
-        url = "https://" + url
 
-    home = polite_get(url)
+    # Probeer meerdere varianten: een 'niet bereikbaar' is vaak alleen het
+    # verkeerde schema (http/https) of het ontbreken van www.
+    home = None
+    for kandidaat in _url_varianten(url):
+        home = polite_get(kandidaat)
+        if home is not None:
+            url = str(home.url) or kandidaat   # gebruik de uiteindelijke URL na redirect
+            break
     if home is None:
         return result
 

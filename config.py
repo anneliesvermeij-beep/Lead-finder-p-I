@@ -23,9 +23,11 @@ CITIES = [
 
 # --- Verzoeken (netjes scrapen) ----------------------------------------------
 
-USER_AGENT = "BureauLeadFinder/1.0 (eigen onderzoek; contact via je-eigen-mail)"
-REQUEST_TIMEOUT = 12
-THROTTLE_SECONDS = 1.5
+# Een realistische browser-UA: veel bureausites blokkeren onbekende bots.
+USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+REQUEST_TIMEOUT = 20          # ruimer: trage servers haalden de 12s niet
+THROTTLE_SECONDS = 1.0
 MAX_PAGES_PER_SITE = 3
 LOW_CONTENT_CHARS = 400
 
