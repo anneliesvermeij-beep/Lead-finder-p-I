@@ -22,10 +22,6 @@ def score_lead(signals: dict):
         score += w["photo_credit"]
         reasons.append("Noemt een fotograaf bij naam: " + signals["photo_credits"][0])
 
-    if signals["used_stock"]:
-        score += w["uses_stock"]
-        reasons.append("Gebruikt stockbeeld (" + ", ".join(signals["used_stock"]) + ")")
-
     # Voorkeurswoorden (food/instore) tellen zwaarder mee.
     priority = signals.get("priority_hits", [])
     if priority:
@@ -59,10 +55,6 @@ def score_lead(signals: dict):
     if signals["does_campaign_work"]:
         score += w["does_campaign_work"]
         reasons.append("Levert campagne-/klantwerk")
-
-    if signals["emails"]:
-        score += w["has_contact_email"]
-        reasons.append("Direct te mailen: " + signals["emails"][0])
 
     if signals["inhouse_photography"]:
         score += w["inhouse_penalty"]

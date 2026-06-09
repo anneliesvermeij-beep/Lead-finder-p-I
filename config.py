@@ -90,18 +90,18 @@ NON_AGENCY_DOMAINS = [
 # --- Scoring (0-100) ---------------------------------------------------------
 WEIGHTS = {
     "reachable": 5,
-    "uses_stock": 25,
     "photo_credit": 30,
     "priority_per_keyword": 12,   # voorkeurswoorden (food/instore) tellen dubbel zo zwaar
     "priority_cap": 36,
     "niche_per_keyword": 6,
     "niche_cap": 24,
     "does_campaign_work": 15,
-    "has_contact_email": 15,
     "visual_per_keyword": 9,      # beeld/fotografie-focus: stevige bonus
     "visual_cap": 27,
     "negative_per_keyword": -12,  # research/tech/platform: aftrek
     "negative_cap": -36,
     "inhouse_penalty": -20,
     "review_floor": 30,
+    # NB: e-mail en stockbeeld tellen bewust NIET meer mee in de score.
+    # E-mail = bereikbaarheid (aparte kolom), stockbeeld = te dubbelzinnig.
 }
