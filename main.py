@@ -28,7 +28,8 @@ load_dotenv()
 
 
 def load_seed(path: str) -> list:
-    """Leest een CSV met minstens een kolom 'website' (optioneel 'name', 'city')."""
+    """Leest een CSV met minstens een kolom 'website' (optioneel 'name', 'city',
+    'phone', 'type'). 'type' is 'bureau' (standaard) of 'direct merk'."""
     rows = []
     with open(path, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
@@ -38,6 +39,7 @@ def load_seed(path: str) -> list:
                     "website": row["website"],
                     "city": row.get("city", ""),
                     "phone": row.get("phone", ""),
+                    "type": row.get("type", "").strip() or "bureau",
                 })
     return rows
 
@@ -70,7 +72,7 @@ def build(agencies: list, out_path: str):
                 + signals["niche_hits"]
             )),
             "uses_stock": ", ".join(signals["used_stock"]),
-            "type": "bureau",
+            "type": a.get("type", "bureau"),
         })
         print(f"      score {score} - {'; '.join(reasons)}")
 
