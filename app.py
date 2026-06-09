@@ -26,11 +26,12 @@ except ImportError:
 DATA_PATH = Path(__file__).parent / "data" / "leads.csv"
 
 STATUSES = ["niet benaderd", "benaderd", "geen interesse", "klant"]
+TYPES = ["bureau", "direct merk"]
 
 ALL_FIELDS = [
     "score", "review", "name", "website", "city", "email",
     "reasons", "photo_credits", "niche_hits", "uses_stock", "phone",
-    "status", "notes",
+    "status", "notes", "type",
 ]
 
 _USE_SUPABASE = _SUPABASE_LIB and "supabase_url" in st.secrets
@@ -53,11 +54,12 @@ def load_leads() -> pd.DataFrame:
             return pd.DataFrame(columns=ALL_FIELDS)
         df = pd.read_csv(DATA_PATH, dtype=str).fillna("")
 
-    for col in ("status", "notes"):
+    for col in ("status", "notes", "type"):
         if col not in df.columns:
             df[col] = ""
     df["score"] = pd.to_numeric(df["score"], errors="coerce").fillna(0).astype(int)
     df["status"] = df["status"].apply(lambda x: x if x in STATUSES else STATUSES[0])
+    df["type"] = df["type"].apply(lambda x: x if x in TYPES else TYPES[0])
     return df.sort_values("score", ascending=False).reset_index(drop=True)
 
 
@@ -116,6 +118,7 @@ def run_analyzer(url: str, name: str) -> tuple:
         "uses_stock": ", ".join(signals["used_stock"]),
         "status": STATUSES[0],
         "notes": "",
+        "type": TYPES[0],
     }
     return True, f"Score {score} — {'; '.join(reasons[:2])}", lead
 
@@ -131,6 +134,7 @@ if "df" not in st.session_state:
 
 with st.sidebar:
     st.title("🔍 Filters")
+    type_filter = st.multiselect("Type", TYPES, default=TYPES)
     status_filter = st.multiselect("Status", STATUSES, default=STATUSES)
     niche_kw = st.text_input("Specialiteit zoekwoord", placeholder="food, retail …")
     st.divider()
@@ -143,7 +147,7 @@ with st.sidebar:
 
 df: pd.DataFrame = st.session_state.df
 
-mask = df["status"].isin(status_filter)
+mask = df["status"].isin(status_filter) & df["type"].isin(type_filter)
 if niche_kw:
     kw = niche_kw.lower()
     mask &= (
@@ -211,7 +215,8 @@ else:
     tbl.insert(0, "●", tbl["score"].apply(tier_icon))
     tbl["⚠️"] = tbl["review"].apply(lambda x: "⚠️" if x == "ja" else "")
 
-    SHOW = ["●", "⚠️", "score", "name", "website", "city", "email", "niche_hits", "status", "notes"]
+    SHOW = ["●", "⚠️", "score", "name", "website", "city", "email", "niche_hits",
+            "type", "status", "notes"]
 
     edited = st.data_editor(
         tbl[SHOW],
@@ -219,15 +224,18 @@ else:
             "●": st.column_config.TextColumn("", width=38),
             "⚠️": st.column_config.TextColumn("", width=35),
             "score": st.column_config.NumberColumn("Score", width=68),
-            "name": st.column_config.TextColumn("Bureau", width=175),
-            "website": st.column_config.LinkColumn("Website", width=175),
-            "city": st.column_config.TextColumn("Stad", width=95),
-            "email": st.column_config.TextColumn("E-mail", width=170),
-            "niche_hits": st.column_config.TextColumn("Specialiteit", width=160),
-            "status": st.column_config.SelectboxColumn(
-                "Status", options=STATUSES, width=155, required=True
+            "name": st.column_config.TextColumn("Naam", width=170),
+            "website": st.column_config.LinkColumn("Website", width=170),
+            "city": st.column_config.TextColumn("Stad", width=90),
+            "email": st.column_config.TextColumn("E-mail", width=165),
+            "niche_hits": st.column_config.TextColumn("Specialiteit", width=155),
+            "type": st.column_config.SelectboxColumn(
+                "Type", options=TYPES, width=120, required=True
             ),
-            "notes": st.column_config.TextColumn("Notities", width=260),
+            "status": st.column_config.SelectboxColumn(
+                "Status", options=STATUSES, width=150, required=True
+            ),
+            "notes": st.column_config.TextColumn("Notities", width=250),
         },
         disabled=["●", "⚠️", "score", "name", "website", "city", "email", "niche_hits"],
         use_container_width=True,
@@ -239,6 +247,7 @@ else:
     if st.button("💾 Wijzigingen opslaan", type="primary"):
         st.session_state.df.loc[df_view.index, "status"] = edited["status"].values
         st.session_state.df.loc[df_view.index, "notes"] = edited["notes"].values
+        st.session_state.df.loc[df_view.index, "type"] = edited["type"].values
         persist(st.session_state.df)
         st.success("✅ Opgeslagen!")
 

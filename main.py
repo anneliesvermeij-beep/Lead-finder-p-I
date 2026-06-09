@@ -70,6 +70,7 @@ def build(agencies: list, out_path: str):
                 + signals["niche_hits"]
             )),
             "uses_stock": ", ".join(signals["used_stock"]),
+            "type": "bureau",
         })
         print(f"      score {score} - {'; '.join(reasons)}")
 

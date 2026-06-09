@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 FIELDS = [
     "score", "review", "name", "website", "city", "email",
     "reasons", "photo_credits", "niche_hits", "uses_stock", "phone",
-    "status", "notes",
+    "status", "notes", "type",
 ]
 
 
@@ -72,7 +72,7 @@ def save_leads(path: str, leads: list):
     client = _supabase_client()
     if client:
         try:
-            result = client.table("leads").select("website,status,notes").execute()
+            result = client.table("leads").select("website,status,notes,type").execute()
             for row in result.data or []:
                 d = _domain(row.get("website", ""))
                 if d and d not in existing_by_domain:
@@ -88,6 +88,7 @@ def save_leads(path: str, leads: list):
         existing = existing_by_domain.get(d, {})
         lead.setdefault("status", existing.get("status", ""))
         lead.setdefault("notes", existing.get("notes", ""))
+        lead.setdefault("type", existing.get("type") or "bureau")
         merged.append(lead)
 
     # Bestaande leads die niet opnieuw geanalyseerd zijn behouden
