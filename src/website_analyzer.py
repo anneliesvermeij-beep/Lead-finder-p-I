@@ -113,15 +113,21 @@ def extract_signals_from_html(html: str, base_url: str) -> dict:
         # Strip URL-encoding (%20) en losse rommel aan de randen.
         return addr.replace("%20", "").strip(" .,-").lower()
 
+    def _geldig(addr: str) -> bool:
+        # Echt e-mailadres: bevat @ en een punt erna, geen JS-rommel.
+        return ("@" in addr and "." in addr.split("@")[-1]
+                and addr not in ("null", "array", "false", "undefined")
+                and not any(n in addr for n in EMAIL_NOISE))
+
     emails = set()
     for mail in EMAIL_RE.findall(html):
         low = _schoon(mail)
-        if low and not any(n in low for n in EMAIL_NOISE):
+        if _geldig(low):
             emails.add(low)
     for a in soup.find_all("a", href=True):
         if a["href"].lower().startswith("mailto:"):
             addr = _schoon(a["href"][7:].split("?")[0])
-            if addr and not any(n in addr for n in EMAIL_NOISE):
+            if _geldig(addr):
                 emails.add(addr)
 
     # 7) Interne links naar relevante pagina's om verder te kijken.
