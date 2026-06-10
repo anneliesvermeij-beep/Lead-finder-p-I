@@ -84,11 +84,17 @@ def main():
     vandaag = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     nu = datetime.now(timezone.utc).isoformat()
 
-    leads = db.table("crm_leads").select(
-        "id,bedrijfsnaam,contact_momenten,prioriteit"
-    ).execute().data or []
+    # Alleen leads die je actief opvolgt (met opvolgdatum) — niet de hele voorraad.
+    leads = (
+        db.table("crm_leads")
+        .select("id,bedrijfsnaam,contact_momenten,prioriteit")
+        .not_.is_("volgende_actie_op", "null")
+        .execute()
+        .data
+        or []
+    )
 
-    print(f"{len(leads)} CRM-leads checken op nieuws (laatste {args.dagen} dagen)…\n")
+    print(f"{len(leads)} actieve CRM-leads checken op nieuws (laatste {args.dagen} dagen)…\n")
     getriggerd = 0
     for lead in leads:
         naam = lead["bedrijfsnaam"]

@@ -15,8 +15,7 @@ Gebruik:
 import argparse
 import json
 import os
-import random
-import time
+import uuid
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
@@ -34,7 +33,7 @@ MAP_STATUS = {
 
 
 def _id() -> str:
-    return f"crm_{int(time.time()*1000):x}{random.randint(1000, 9999)}"
+    return "crm_" + uuid.uuid4().hex[:16]
 
 
 def _domain(url: str) -> str:
@@ -54,7 +53,10 @@ def main():
     p.add_argument("--aantal", type=int, default=20, help="Hoeveel bureaus (default 20)")
     p.add_argument("--min-score", type=int, default=0, help="Alleen vanaf deze score")
     p.add_argument("--niche", default="", help="Alleen met dit woord in de specialiteit")
+    p.add_argument("--alles", action="store_true",
+                   help="Importeer ALLE leads als voorraad (geen opvolgdatum, niet in 'Vandaag')")
     args = p.parse_args()
+    aantal = 10**9 if args.alles else args.aantal
 
     url, key = os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY")
     if not url or not key:
@@ -89,7 +91,7 @@ def main():
         if args.niche and args.niche.lower() not in (r.get("niche_hits") or "").lower():
             continue
         gekozen.append(r)
-        if len(gekozen) >= args.aantal:
+        if len(gekozen) >= aantal:
             break
 
     if not gekozen:
@@ -114,8 +116,9 @@ def main():
             "telefoon": r.get("phone") or None,
             "website": r.get("website") or None,
             "status": MAP_STATUS.get(r.get("status", ""), "nieuw"),
-            "prioriteit": score >= 90,
-            "volgende_actie_op": vandaag,
+            # Voorraad-import (--alles): geen opvolgdatum, geen ster -> niet in 'Vandaag'.
+            "prioriteit": (score >= 90) and not args.alles,
+            "volgende_actie_op": None if args.alles else vandaag,
             "contact_momenten": [
                 {"id": _id(), "datum": nu, "kanaal": "overig", "notitie": context}
             ],
