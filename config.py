@@ -87,6 +87,15 @@ NON_AGENCY_DOMAINS = [
     "facebook.com", "linkedin.com", "wikipedia.org", "kvk.nl", "ster.nl",
 ]
 
+# Woorden in naam/website die op een niet-bureau wijzen (school, horeca, etc.).
+# Valse treffers van de OSM-naamzoektocht worden hiermee geweerd.
+NON_AGENCY_WORDS = [
+    "kindcentrum", "basisschool", "pcbde", "schoolvereniging", "pizzeria",
+    "restaurant", "eetcafe", "paviljoen", "brasserie", "camping",
+    "kampeerboerderij", "strandpaviljoen", "parochie", "sportschool", "fysio",
+    "tandarts", "manege", "dierenarts", "snackbar", "cafetaria",
+]
+
 # --- Scoring (0-100) ---------------------------------------------------------
 WEIGHTS = {
     "reachable": 5,

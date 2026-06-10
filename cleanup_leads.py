@@ -35,13 +35,19 @@ def main():
     import config
     db = create_client(url, key)
 
-    rows = db.table("leads").select("website,score,status,notes").execute().data or []
+    rows = db.table("leads").select("website,name,score,status,notes").execute().data or []
     start = len(rows)
 
-    # --- 0) Niet-bureaus (marktplaatsen/portals/research) verwijderen --------
+    # --- 0) Niet-bureaus (marktplaatsen/scholen/horeca/etc.) verwijderen -----
+    def _is_niet_bureau(r: dict) -> bool:
+        if _domain(r["website"]) in config.NON_AGENCY_DOMAINS:
+            return True
+        tekst = f"{r.get('name', '')} {r.get('website', '')}".lower()
+        return any(w in tekst for w in config.NON_AGENCY_WORDS)
+
     niet_bureau = [
         r["website"] for r in rows
-        if _domain(r["website"]) in config.NON_AGENCY_DOMAINS and not _aangeraakt(r)
+        if _is_niet_bureau(r) and not _aangeraakt(r)
     ]
     for w in niet_bureau:
         db.table("leads").delete().eq("website", w).execute()

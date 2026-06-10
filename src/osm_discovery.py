@@ -30,8 +30,8 @@ area["ISO3166-1"="NL"][admin_level=2]->.nl;
   nwr["office"="design"](area.nl);
   nwr["shop"="advertising"](area.nl);
   nwr["craft"="designer"](area.nl);
-  nwr["name"~"reclamebureau|ontwerpbureau|designbureau|creatief|communicatiebureau|branding|grafisch ontwerp",i]["website"](area.nl);
-  nwr["name"~"design studio|creative studio|reclame studio|ontwerpstudio",i]["website"](area.nl);
+  nwr["name"~"reclamebureau|ontwerpbureau|designbureau|communicatiebureau|grafisch ontwerp",i]["website"](area.nl);
+  nwr["name"~"design studio|reclamestudio|ontwerpstudio",i]["website"](area.nl);
 );
 out tags center;
 """
