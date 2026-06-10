@@ -116,6 +116,7 @@ def main():
             "telefoon": r.get("phone") or None,
             "website": r.get("website") or None,
             "status": MAP_STATUS.get(r.get("status", ""), "nieuw"),
+            "score": score,
             # Voorraad-import (--alles): geen opvolgdatum, geen ster -> niet in 'Vandaag'.
             "prioriteit": (score >= 90) and not args.alles,
             "volgende_actie_op": None if args.alles else vandaag,
