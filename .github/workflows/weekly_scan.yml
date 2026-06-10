@@ -43,4 +43,3 @@ jobs:
           python main.py --seed data/seed_adformatie.csv
           python backfill_specialiteit.py
           python cleanup_leads.py
-          python check_nieuws.py

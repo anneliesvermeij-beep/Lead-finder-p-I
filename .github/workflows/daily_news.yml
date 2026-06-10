@@ -1,0 +1,26 @@
+name: Dagelijkse nieuws-check
+
+on:
+  schedule:
+    # Elke dag om 07:30 Nederlandse tijd (05:30 UTC)
+    - cron: "30 5 * * *"
+  workflow_dispatch:
+
+jobs:
+  news:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: CRM-leads checken op nieuws
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python check_nieuws.py --dagen 2
