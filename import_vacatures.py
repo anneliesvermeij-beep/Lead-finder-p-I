@@ -13,32 +13,13 @@ import csv
 import os
 import uuid
 from datetime import datetime, timezone
-from urllib.parse import urlparse
+from urllib.parse import quote
 
 from dotenv import load_dotenv
-
-from src.website_analyzer import analyze_website
-from src.scoring import score_lead
 
 load_dotenv()
 
 SEED = "data/seed_vacatures.csv"
-
-
-def _domain(u: str) -> str:
-    u = u or ""
-    return urlparse(u if u.startswith("http") else "https://" + u).netloc.replace("www.", "").lower()
-
-
-def _branche(niche: str) -> str:
-    niche = (niche or "").lower()
-    if "horeca" in niche:
-        return "horeca"
-    if "food" in niche:
-        return "foodproducent"
-    if "retail" in niche or "webshop" in niche or "product" in niche:
-        return "webshop"
-    return "overig"
 
 
 def main():
@@ -49,39 +30,35 @@ def main():
     from supabase import create_client
     db = create_client(url, key)
 
-    bestaande = db.table("crm_leads").select("website").execute().data or []
-    al_in_crm = {_domain(r["website"]) for r in bestaande if r.get("website")}
-
     with open(SEED, newline="", encoding="utf-8") as f:
-        rijen = [r for r in csv.DictReader(f) if r.get("website")]
+        rijen = [r for r in csv.DictReader(f) if r.get("name")]
+
+    # Welke vacature-bedrijven staan al in de CRM? (op naam, om dubbel te voorkomen)
+    bestaande_namen = {
+        (r.get("bedrijfsnaam") or "").lower()
+        for r in db.table("crm_leads").select("bedrijfsnaam").eq("bron", "vacature").execute().data or []
+    }
 
     nu = datetime.now(timezone.utc).isoformat()
     toegevoegd = 0
     for r in rijen:
-        site = r["website"]
-        if _domain(site) in al_in_crm:
-            print(f"  (overslaan, al in CRM) {r['name']}")
+        naam = r["name"]
+        if naam.lower() in bestaande_namen:
+            print(f"  (overslaan, al in CRM) {naam}")
             continue
-
-        signals = analyze_website(site)
-        score, reasons, _ = score_lead(signals)
-        spec = ", ".join(dict.fromkeys(
-            signals.get("priority_hits", []) + signals.get("visual_hits", []) + signals["niche_hits"]
-        ))
-        notitie = f"📌 Heeft vacature voor fotograaf (gevonden via Indeed)"
-        if spec:
-            notitie += f" · specialiteit: {spec}"
-
+        # De vacature staat op Indeed, niet op de bedrijfssite. We bewaren een
+        # verifieerbare Indeed-zoeklink i.p.v. een (onzekere) bedrijfswebsite.
+        link = "https://nl.indeed.com/jobs?q=" + quote(naam + " fotograaf")
+        notitie = f"📌 Vacature voor fotograaf — bekijk op Indeed: {link}"
         db.table("crm_leads").insert({
             "id": "vac_" + uuid.uuid4().hex[:16],
-            "bedrijfsnaam": r["name"],
-            "branche": _branche(spec),
-            "website": site,
-            "email": signals["emails"][0] if signals["emails"] else None,
+            "bedrijfsnaam": naam,
+            "branche": "overig",
+            "website": link,
             "status": "nieuw",
             "prioriteit": False,
             "volgende_actie_op": None,
-            "score": score,
+            "score": 0,
             "bron": "vacature",
             "contact_momenten": [
                 {"id": uuid.uuid4().hex[:12], "datum": nu, "kanaal": "overig", "notitie": notitie}
@@ -89,7 +66,7 @@ def main():
             "aangemaakt_op": nu,
         }).execute()
         toegevoegd += 1
-        print(f"  + {r['name']}  (score {score})")
+        print(f"  + {naam}")
 
     print(f"\n{toegevoegd} vacature-bedrijven toegevoegd (bron=vacature).")
 
