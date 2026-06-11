@@ -43,3 +43,5 @@ jobs:
           python main.py --seed data/seed_adformatie.csv
           python backfill_specialiteit.py
           python cleanup_leads.py
+          python export_to_crm.py --alles
+          python backfill_score.py

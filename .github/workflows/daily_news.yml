@@ -1,4 +1,4 @@
-name: Dagelijkse nieuws-check
+name: Dagelijkse leads + nieuws
 
 on:
   schedule:
@@ -19,8 +19,10 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: CRM-leads checken op nieuws
+      - name: Dagstapel klaarzetten + nieuws checken
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python check_nieuws.py --dagen 2
+        run: |
+          python dagelijkse_leads.py --aantal 20
+          python check_nieuws.py --dagen 2
