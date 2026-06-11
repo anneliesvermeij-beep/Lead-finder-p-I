@@ -38,8 +38,9 @@ def main():
     # Voorraad: geen opvolgdatum, open status. Hoogste score eerst.
     voorraad = (
         db.table("crm_leads")
-        .select("id,bedrijfsnaam,score,status")
+        .select("id,bedrijfsnaam,score,status,bron")
         .is_("volgende_actie_op", "null")
+        .neq("bron", "vacature")  # vacature-leads horen in hun eigen tabblad
         .order("score", desc=True)
         .execute()
         .data
