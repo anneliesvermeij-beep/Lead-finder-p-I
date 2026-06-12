@@ -15,6 +15,13 @@ geeft een score (0-100) en schrijft een gesorteerde CSV naar data/leads.csv.
 import argparse
 import csv
 import os
+import sys
+
+# Console op UTF-8 zodat emoji-redenen (📷) op Windows niet crashen.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 
 from dotenv import load_dotenv
 

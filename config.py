@@ -113,4 +113,9 @@ WEIGHTS = {
     "review_floor": 30,
     # NB: e-mail en stockbeeld tellen bewust NIET meer mee in de score.
     # E-mail = bereikbaarheid (aparte kolom), stockbeeld = te dubbelzinnig.
+    # --- Beeldkwaliteit (slechte fotografie = kans) -------------------------
+    "foto_stockfoto": 20,
+    "foto_geen_fotos": 15,
+    "foto_slechte_belichting": 18,
+    "foto_lage_kwaliteit": 18,
 }

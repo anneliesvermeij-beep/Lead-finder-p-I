@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 
 import config
 from src.scraper_utils import polite_get
+from src.image_quality_analyzer import analyze_image_quality
 
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 EMAIL_NOISE = (
@@ -197,6 +198,7 @@ def analyze_website(url: str) -> dict:
         "photo_credits": [], "priority_hits": [], "niche_hits": [], "visual_hits": [],
         "negative_hits": [], "does_campaign_work": False,
         "inhouse_photography": False, "emails": [], "low_content": False,
+        "foto_criteria": [], "foto_details": {},
     }
     if not url:
         return result
@@ -215,6 +217,13 @@ def analyze_website(url: str) -> dict:
     result["reachable"] = True
     signals = extract_signals_from_html(home.text, url)
     total_text = signals["text_length"]
+
+    # Beeldkwaliteit van de homepage (slechte fotografie = kans). Mag nooit
+    # de hele analyse laten klappen, dus in een try.
+    try:
+        foto = analyze_image_quality(home.text, url)
+    except Exception:
+        foto = {"criteria": [], "details": {}}
 
     pages_seen = 1
     for link in signals["internal_links"]:
@@ -242,6 +251,8 @@ def analyze_website(url: str) -> dict:
         "text_length": total_text,
         "used_stock": signals["used_stock"],
         "photo_credits": signals["photo_credits"],
+        "foto_criteria": foto["criteria"],
+        "foto_details": foto["details"],
         "priority_hits": signals["priority_hits"],
         "niche_hits": signals["niche_hits"],
         "visual_hits": signals["visual_hits"],

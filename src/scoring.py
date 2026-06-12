@@ -6,6 +6,15 @@ Gewichten staan in config.WEIGHTS, zodat je kunt tunen zonder hier te wijzigen.
 import config
 
 
+# Leesbare uitleg per beeldkwaliteit-criterium (zie image_quality_analyzer).
+FOTO_REDEN = {
+    "stockfoto": "Gebruikt stockfoto's",
+    "geen_fotos": "Geen of nauwelijks eigen foto's",
+    "slechte_belichting": "Slechte belichting (te donker of overbelicht)",
+    "lage_kwaliteit": "Lage beeldkwaliteit (onscherp of lage resolutie)",
+}
+
+
 def score_lead(signals: dict):
     """Geeft (score 0-100, redenen, needs_review) terug."""
     w = config.WEIGHTS
@@ -21,6 +30,12 @@ def score_lead(signals: dict):
     if signals.get("photo_credits"):
         score += w["photo_credit"]
         reasons.append("Noemt een fotograaf bij naam: " + signals["photo_credits"][0])
+
+    # Beeldkwaliteit: slechte fotografie = kans. Elk criterium telt mee.
+    for crit in signals.get("foto_criteria", []):
+        gewicht = w.get("foto_" + crit, 0)
+        score += gewicht
+        reasons.append("📷 " + FOTO_REDEN.get(crit, crit))
 
     # Voorkeurswoorden (food/instore) tellen zwaarder mee.
     priority = signals.get("priority_hits", [])
