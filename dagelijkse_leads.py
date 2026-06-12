@@ -40,7 +40,7 @@ def main():
         db.table("crm_leads")
         .select("id,bedrijfsnaam,score,status,bron")
         .is_("volgende_actie_op", "null")
-        .neq("bron", "vacature")  # vacature-leads horen in hun eigen tabblad
+        .eq("bron", "finder")  # alleen bureaus; aparte bronnen hebben eigen tabblad
         .order("score", desc=True)
         .execute()
         .data
